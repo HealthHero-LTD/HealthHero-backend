@@ -18,7 +18,7 @@ app = Flask(__name__)
 def hello():
     return('hello')
 
-@app.get("/idnex")
+@app.get("/index")
 def index_get():
     return "GET request reveived"
 
