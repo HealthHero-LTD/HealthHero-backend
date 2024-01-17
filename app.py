@@ -13,7 +13,6 @@ DATABASE_URL = (
 )
 
 app = Flask(__name__)
-
 @app.route('/')
 def hello():
     return('hello')
@@ -28,13 +27,15 @@ def index_post():
     print(f"received data: {data}")
     
     try:
-        dbConnection = psycopg2.connect(DATABASE_URL)
-        print("connected to the db successfully")
-        return jsonify({'message': 'data transferred!'})
+        with psycopg2.connect(DATABASE_URL) as dbConnection:
+            print("connected to the db successfully")
+            return jsonify({'message': 'data transferred!'})
     except Exception as e:
         return jsonify({'error': str(e)})
     finally:
-        dbConnection.close()
+            if dbConnection:
+                print("dbConnection active status:", dbConnection.closed)
+
     
 # if __name__ == '__main__':
 #     app.run(host='0.0.0.0', port=6969, debug=True)
