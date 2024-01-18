@@ -21,14 +21,29 @@ CREATE TABLE IF NOT EXISTS "user-profile"(
     google_email_address VARCHAR(50) UNIQUE,
     steps INTEGER
 );
-"""
 
+ALTER TABLE "user-profile"
+ADD COLUMN token VARCHAR(256);
+"""
 
 app = Flask(__name__)
 
+############
 def generate_token(username):
     payload = {'username': username}
     return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
+
+def save_token_to_database(username, token):
+    with psycopg2.connect(DATABASE_URL) as dbConnection:
+        with dbConnection.cursor() as cursor:
+            update_query = """
+            UPDATE "user-profile"
+            SET token = %s
+            WHERE username = %s;
+            """
+            cursor.execute(update_query, (username, token))
+            dbConnection.commit()
+#############
 
 @app.route('/')
 def hello():
@@ -58,8 +73,8 @@ def index_post():
                                )
                 dbConnection.commit()
                 print("table 'user' created successfully")
-                
                 token = generate_token(data['username'])
+                save_token_to_database(data['username'], token)
             return jsonify({'message': 'data transferred!', 'token': token})
     except Exception as e:
         return jsonify({'error': str(e)})
