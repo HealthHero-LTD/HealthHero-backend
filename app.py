@@ -1,5 +1,6 @@
 import os
 import psycopg2
+import jwt
 from flask import Flask, request, jsonify
 
 # db configs
@@ -12,6 +13,7 @@ DATABASE_URL = (
     f"@localhost:5432/{DB_NAME}"
 )
 
+SECRET_KEY = "test-token"
 # query blocks
 create_userTable_query = """
 CREATE TABLE IF NOT EXISTS "user-profile"(
@@ -23,6 +25,10 @@ CREATE TABLE IF NOT EXISTS "user-profile"(
 
 
 app = Flask(__name__)
+
+def generate_token(username):
+    payload = {'username': username}
+    return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
 
 @app.route('/')
 def hello():
@@ -52,7 +58,9 @@ def index_post():
                                )
                 dbConnection.commit()
                 print("table 'user' created successfully")
-            return jsonify({'message': 'data transferred!'})
+                
+                token = generate_token(data['username'])
+            return jsonify({'message': 'data transferred!', 'token': token})
     except Exception as e:
         return jsonify({'error': str(e)})
 
