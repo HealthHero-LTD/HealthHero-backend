@@ -19,11 +19,9 @@ create_userTable_query = """
 CREATE TABLE IF NOT EXISTS "user-profile"(
     username VARCHAR(50) PRIMARY KEY,
     google_email_address VARCHAR(50) UNIQUE,
-    steps INTEGER
+    steps INTEGER,
+    token VARCHAR(256)
 );
-
-ALTER TABLE "user-profile"
-ADD COLUMN token VARCHAR(256);
 """
 
 app = Flask(__name__)
@@ -34,6 +32,7 @@ def generate_token(username):
     return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
 
 def save_token_to_database(username, token):
+    print(f"Saving token {token} for user {username}")
     with psycopg2.connect(DATABASE_URL) as dbConnection:
         with dbConnection.cursor() as cursor:
             update_query = """
@@ -41,7 +40,7 @@ def save_token_to_database(username, token):
             SET token = %s
             WHERE username = %s;
             """
-            cursor.execute(update_query, (username, token))
+            cursor.execute(update_query, (token, username))
             dbConnection.commit()
 #############
 
