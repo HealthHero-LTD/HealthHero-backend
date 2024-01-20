@@ -12,29 +12,50 @@ DATABASE_URL = (
     f"@localhost:5432/{DB_NAME}"
 )
 
+# query blocks
+create_userTable_query = """
+CREATE TABLE IF NOT EXISTS "user-profile"(
+    username VARCHAR(50) PRIMARY KEY,
+    google_email_address VARCHAR(50) UNIQUE,
+    steps INTEGER
+);
+"""
+
+
 app = Flask(__name__)
 
 @app.route('/')
 def hello():
     return('hello')
 
-@app.get("/index")
+@app.get("/user-profile")
 def index_get():
     return "GET request reveived"
 
-@app.post("/index")
+@app.post("/user-profile")
 def index_post():
     data = request.get_json()
     print(f"received data: {data}")
     
     try:
-        dbConnection = psycopg2.connect(DATABASE_URL)
-        print("connected to the db successfully")
-        return jsonify({'message': 'data transferred!'})
+        with psycopg2.connect(DATABASE_URL) as dbConnection:
+            with dbConnection.cursor() as cursor:
+                cursor.execute(create_userTable_query)
+                
+                insert_query = """
+                INSERT INTO "user-profile" (username, google_email_address, steps)
+                VALUES (%s, %s, %s);
+                """
+                cursor.execute(insert_query, (data['username'], 
+                                              data['google_email_address'], 
+                                              data['steps'])
+                               )
+                dbConnection.commit()
+                print("table 'user' created successfully")
+            return jsonify({'message': 'data transferred!'})
     except Exception as e:
         return jsonify({'error': str(e)})
-    finally:
-        dbConnection.close()
+
     
 # if __name__ == '__main__':
 #     app.run(host='0.0.0.0', port=6969, debug=True)
