@@ -37,8 +37,20 @@ def login():
         try:
             with pg2.connect(DATABASE_URL) as connection:
                 with connection.cursor() as cursor:
-                    cursor.execute(sql_queries.inser_googleid_users, (googleid, 200))
-                    connection.commit()
+                    cursor.execute(
+                        "SELECT googleid FROM users WHERE googleid=%s", (googleid,)
+                    )
+                    googleid_exist = cursor.fetchone()
+
+                    if googleid_exist:
+                        return jsonify(
+                            {"message": "user already exists", "GoogleID": googleid}
+                        )
+                    else:
+                        cursor.execute(
+                            sql_queries.inser_googleid_users, (googleid, 200)
+                        )
+                        connection.commit()
             return jsonify(
                 {"message": "data inserted successfully", "googleID": googleid}
             )
