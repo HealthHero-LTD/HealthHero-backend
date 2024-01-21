@@ -17,3 +17,19 @@ UPDATE "user-profile"
 SET token = %s
 WHERE username = %s;
 """
+
+inser_googleid_users = """
+INSERT INTO users (googleid, steps) 
+VALUES (%s, %s);
+"""
+
+insert_login_user = """
+INSERT INTO "users" (googleid)
+VALUES (%s);
+"""
+
+update_googleID = """
+UPDATE "users"
+SET steps = %s
+WHERE googleid = %s;
+"""

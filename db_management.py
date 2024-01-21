@@ -1,4 +1,4 @@
-import psycopg2
+import psycopg2 as pg2
 import jwt
 import sql_queries
 import os
@@ -17,7 +17,7 @@ def generate_token(username, secret_key):
 
 def save_token_to_database(username, token, database_url):
     print(f"Saving token {token} for user {username}")
-    with psycopg2.connect(database_url) as dbConnection:
-        with dbConnection.cursor() as cursor:
+    with pg2.connect(database_url) as connection:
+        with connection.cursor() as cursor:
             cursor.execute(sql_queries.update_token_query, (token, username))
-            dbConnection.commit()
+            connection.commit()
