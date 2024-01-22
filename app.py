@@ -5,11 +5,18 @@ import db_management as dbm
 from flask import Flask, request, jsonify
 from google.oauth2 import id_token
 from google.auth.transport import requests
+from flask_jwt_extended import create_access_token
+from flask_jwt_extended import get_jwt_identity
+from flask_jwt_extended import jwt_required
+from flask_jwt_extended import JWTManager
 
 DATABASE_URL = dbm.DATABASE_URL
 SECRET_KEY = dbm.SECRET_KEY
 CLIENT_ID = os.getenv("CLIENT_ID")
 app = Flask(__name__)
+
+app.config["JWT_SECRET_KEY"] = "super-secret"
+jwt = JWTManager(app)
 
 
 @app.route("/")
@@ -41,10 +48,15 @@ def login():
                         "SELECT googleid FROM users WHERE googleid=%s", (googleid,)
                     )
                     googleid_exist = cursor.fetchone()
+                    access_token = create_access_token(identity=googleid)
 
                     if googleid_exist:
                         return jsonify(
-                            {"message": "user already exists", "GoogleID": googleid}
+                            {
+                                "access_token": access_token,
+                                "message": "user already exists",
+                                "GoogleID": googleid,
+                            }
                         )
                     else:
                         cursor.execute(
@@ -52,13 +64,23 @@ def login():
                         )
                         connection.commit()
             return jsonify(
-                {"message": "data inserted successfully", "googleID": googleid}
+                {
+                    "access_token": access_token,
+                    "message": "data inserted successfully",
+                    "googleID": googleid,
+                }
             )
         except Exception as e:
             return jsonify({"error": str(e)})
     except ValueError:
         print("invalid token")
         return jsonify({"error": ValueError})
+
+
+@app.get("/steps")
+@jwt_required()
+def steps():
+    return "hey"
 
 
 if __name__ == "__main__":
