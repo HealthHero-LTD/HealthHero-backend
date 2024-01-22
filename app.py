@@ -9,6 +9,10 @@ from flask_jwt_extended import create_access_token
 from flask_jwt_extended import get_jwt_identity
 from flask_jwt_extended import jwt_required
 from flask_jwt_extended import JWTManager
+from flask_jwt_extended import create_access_token
+from flask_jwt_extended import get_jwt_identity
+from flask_jwt_extended import jwt_required
+from flask_jwt_extended import JWTManager
 
 DATABASE_URL = dbm.DATABASE_URL
 SECRET_KEY = dbm.SECRET_KEY
@@ -95,7 +99,19 @@ def update_steps():
                 return jsonify(message="steps updated"), new_steps
 
     except Exception as e:
-        return jsonify(message="error updating steps"), 500
+        return jsonify("error": str(e)), 500
+
+
+@app.get("/steps")
+@jwt_required()
+def steps():
+    return "hey"
+
+
+@app.get("/steps")
+@jwt_required()
+def steps():
+    return "hey"
 
 
 if __name__ == "__main__":
