@@ -108,10 +108,22 @@ def steps():
     return "hey"
 
 
-@app.get("/steps")
+@app.get("/update_steps")
 @jwt_required()
-def steps():
-    return "hey"
+def update_steps():
+    try:
+        current_user = get_jwt_identity()
+        with pg2.connect(DATABASE_URL) as connection:
+            with connection.cursor() as cursor:
+                new_steps = request.json.get("steps")
+                update_query = "UPDATE users SET steps = %s WHERE googleid=%s"
+                cursor.execute(update_query, (new_steps, current_user))
+                connection.commit()
+
+                return jsonify(message="steps updated"), new_steps
+
+    except Exception as e:
+        return jsonify(message="error updating steps"), 500
 
 
 if __name__ == "__main__":
