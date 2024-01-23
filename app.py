@@ -10,10 +10,7 @@ from flask_jwt_extended import create_access_token
 from flask_jwt_extended import get_jwt_identity
 from flask_jwt_extended import jwt_required
 from flask_jwt_extended import JWTManager
-from flask_jwt_extended import create_access_token
-from flask_jwt_extended import get_jwt_identity
-from flask_jwt_extended import jwt_required
-from flask_jwt_extended import JWTManager
+
 
 DATABASE_URL = dbm.DATABASE_URL
 SECRET_KEY = dbm.SECRET_KEY
@@ -49,40 +46,35 @@ def login():
     except ValueError as e:
         return jsonify({"error": e}), 401
 
-        try:
-            with pg2.connect(DATABASE_URL) as connection:
-                with connection.cursor() as cursor:
-                    cursor.execute(
-                        "SELECT googleid FROM users WHERE googleid=%s", (googleid,)
-                    )
-                    googleid_exist = cursor.fetchone()
-                    access_token = create_access_token(identity=googleid)
+    try:
+        with pg2.connect(DATABASE_URL) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT googleid FROM users WHERE googleid=%s", (googleid,)
+                )
+                googleid_exist = cursor.fetchone()
+                access_token = create_access_token(identity=googleid)
 
-                    if googleid_exist:
-                        return jsonify(
-                            {
-                                "access_token": access_token,
-                                "message": "user already exists",
-                                "GoogleID": googleid,
-                            }
-                        )
-                    else:
-                        cursor.execute(
-                            sql_queries.inser_googleid_users, (googleid, 200)
-                        )
-                        connection.commit()
-            return jsonify(
-                {
-                    "access_token": access_token,
-                    "message": "data inserted successfully",
-                    "googleID": googleid,
-                }
-            )
-        except Exception as e:
-            return jsonify({"error": str(e)})
-    except ValueError:
-        print("invalid token")
-        return jsonify({"error": ValueError})
+                if googleid_exist:
+                    return jsonify(
+                        {
+                            "access_token": access_token,
+                            "message": "user already exists",
+                            "GoogleID": googleid,
+                        }
+                    )
+                else:
+                    cursor.execute(sql_queries.insert_googleid_users, (googleid, 200))
+                    connection.commit()
+        return jsonify(
+            {
+                "access_token": access_token,
+                "message": "data inserted successfully",
+                "googleID": googleid,
+            }
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
 
 @app.get("/update_steps")
@@ -100,31 +92,13 @@ def update_steps():
                 return jsonify(message="steps updated"), new_steps
 
     except Exception as e:
-        return jsonify("error": str(e)), 500
+        return jsonify({"error": str(e)}), 500
 
 
 @app.get("/steps")
 @jwt_required()
 def steps():
     return "hey"
-
-
-@app.get("/update_steps")
-@jwt_required()
-def update_steps():
-    try:
-        current_user = get_jwt_identity()
-        with pg2.connect(DATABASE_URL) as connection:
-            with connection.cursor() as cursor:
-                new_steps = request.json.get("steps")
-                update_query = "UPDATE users SET steps = %s WHERE googleid=%s"
-                cursor.execute(update_query, (new_steps, current_user))
-                connection.commit()
-
-                return jsonify(message="steps updated"), new_steps
-
-    except Exception as e:
-        return jsonify(message="error updating steps"), 500
 
 
 if __name__ == "__main__":
