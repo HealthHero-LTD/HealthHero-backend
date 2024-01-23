@@ -33,3 +33,9 @@ UPDATE "users"
 SET steps = %s
 WHERE googleid = %s;
 """
+
+get_sorted_leaderboard = """
+SELECT username, "level", steps 
+FROM LEADERBOARD 
+ORDER BY "level" DESC, STEPS DESC;
+"""

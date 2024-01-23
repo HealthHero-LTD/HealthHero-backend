@@ -96,12 +96,23 @@ def update_steps():
 
 
 @app.get("/leaderboard")
-def leaderboard_get():
-    return "hello"
+def get_leaderboard():
+    try:
+        with pg2.connect(DATABASE_URL) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(sql_queries.get_sorted_leaderboard)
+                sorted_leaderboard = cursor.fetchall()
+        response = [
+            {"username": row[0], "level": row[1], "steps": row[2]}
+            for row in sorted_leaderboard
+        ]
+        return jsonify({"final leaderboard": response})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.post("/leaderboard")
-def leaderboard_post():
+def post_leaderboard():
     data = request.get_json()
     username = data.get("username")
     steps = data.get("steps")
