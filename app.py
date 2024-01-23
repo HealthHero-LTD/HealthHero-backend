@@ -46,6 +46,7 @@ def login():
     except ValueError as e:
         return jsonify({"error": e}), 401
 
+
     try:
         with pg2.connect(DATABASE_URL) as connection:
             with connection.cursor() as cursor:
@@ -99,6 +100,7 @@ def update_steps():
 @jwt_required()
 def steps():
     return "hey"
+
 
 
 if __name__ == "__main__":
