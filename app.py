@@ -3,6 +3,7 @@ import psycopg2 as pg2
 import sql_queries
 import db_management as dbm
 from flask import Flask, request, jsonify
+from datetime import timedelta
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from flask_jwt_extended import create_access_token
@@ -20,7 +21,7 @@ CLIENT_ID = os.getenv("CLIENT_ID")
 app = Flask(__name__)
 
 app.config["JWT_SECRET_KEY"] = "super-secret"
-app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 7 * 24 * 60 * 60
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=7)
 jwt = JWTManager(app)
 
 
