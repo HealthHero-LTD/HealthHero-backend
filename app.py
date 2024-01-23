@@ -46,7 +46,6 @@ def login():
     except ValueError as e:
         return jsonify({"error": e}), 401
 
-
     try:
         with pg2.connect(DATABASE_URL) as connection:
             with connection.cursor() as cursor:
@@ -96,11 +95,29 @@ def update_steps():
         return jsonify({"error": str(e)}), 500
 
 
-@app.get("/steps")
-@jwt_required()
-def steps():
-    return "hey"
+@app.get("/leaderboard")
+def leaderboard_get():
+    return "hello"
 
+
+@app.post("/leaderboard")
+def leaderboard_post():
+    data = request.get_json()
+    username = data.get("username")
+    steps = data.get("steps")
+    level = data.get("level")
+
+    try:
+        with pg2.connect(DATABASE_URL) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "INSERT INTO leaderboard (username, steps, level) VALUES (%s, %s, %s)",
+                    (username, steps, level),
+                )
+                connection.commit()
+        return jsonify({"message": "leaderboard updated"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":
