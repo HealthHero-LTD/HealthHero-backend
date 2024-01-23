@@ -18,7 +18,7 @@ SET token = %s
 WHERE username = %s;
 """
 
-inser_googleid_users = """
+insert_googleid_users = """
 INSERT INTO users (googleid, steps) 
 VALUES (%s, %s);
 """

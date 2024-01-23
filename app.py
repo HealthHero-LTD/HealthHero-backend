@@ -41,6 +41,8 @@ def login():
         )
         googleid = idinfo["sub"]
         print(googleid)
+    except ValueError as e:
+        return jsonify({"error": e}), 401
 
         try:
             with pg2.connect(DATABASE_URL) as connection:
