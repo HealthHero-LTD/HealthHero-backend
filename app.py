@@ -1,61 +1,60 @@
 import os
-import psycopg2
+import psycopg2 as pg2
+import sql_queries
+import db_management as dbm
 from flask import Flask, request, jsonify
+from google.oauth2 import id_token
+from google.auth.transport import requests
 
-# db configs
-DB_USER = os.getenv('DB_USER')
-DB_PASSWORD = os.getenv('DB_PASSWORD')
-DB_NAME = os.getenv('DB_NAME')
-
-DATABASE_URL = (
-    f"postgresql://{DB_USER}:{DB_PASSWORD}"
-    f"@localhost:5432/{DB_NAME}"
-)
-
-# query blocks
-create_userTable_query = """
-CREATE TABLE IF NOT EXISTS "user-profile"(
-    username VARCHAR(50) PRIMARY KEY,
-    google_email_address VARCHAR(50) UNIQUE,
-    steps INTEGER
-);
-"""
-
-
+DATABASE_URL = dbm.DATABASE_URL
+SECRET_KEY = dbm.SECRET_KEY
+CLIENT_ID = os.getenv("CLIENT_ID")
 app = Flask(__name__)
 
-@app.route('/')
+
+@app.route("/")
 def hello():
-    return('hello')
+    return "hello"
+
 
 @app.get("/user-profile")
 def index_get():
     return "GET request reveived"
 
-@app.post("/user-profile")
-def index_post():
+
+@app.post("/login")
+def login():
     data = request.get_json()
     print(f"received data: {data}")
-    
+    print(data.get("idToken"))
     try:
-        with psycopg2.connect(DATABASE_URL) as dbConnection:
-            with dbConnection.cursor() as cursor:
-                cursor.execute(create_userTable_query)
-                
-                insert_query = """
-                INSERT INTO "user-profile" (username, google_email_address, steps)
-                VALUES (%s, %s, %s);
-                """
-                cursor.execute(insert_query, (data['username'], 
-                                              data['google_email_address'], 
-                                              data['steps'])
-                               )
-                dbConnection.commit()
-                print("table 'user' created successfully")
-            return jsonify({'message': 'data transferred!'})
-    except Exception as e:
-        return jsonify({'error': str(e)})
+        idinfo = id_token.verify_oauth2_token(
+            data["idToken"], requests.Request(), CLIENT_ID
+        )
+        googleid = idinfo["sub"]
+        print(googleid)
+    except ValueError as e:
+        return jsonify({"error": e}), 401
 
-    
-# if __name__ == '__main__':
-#     app.run(host='0.0.0.0', port=6969, debug=True)
+    try:
+        with pg2.connect(DATABASE_URL) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT googleid FROM users WHERE googleid=%s", (googleid,)
+                )
+                googleid_exist = cursor.fetchone()
+
+                if googleid_exist:
+                    return jsonify(
+                        {"message": "user already exists", "GoogleID": googleid}
+                    )
+                else:
+                    cursor.execute(sql_queries.insert_googleid_users, (googleid, 200))
+                    connection.commit()
+        return jsonify({"message": "data inserted successfully", "googleID": googleid})
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=6969, debug=True)
