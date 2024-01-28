@@ -22,14 +22,16 @@ app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=7)
 jwt = JWTManager(app)
 
 
-@app.route("/")
-def hello():
-    return "hello"
-
-
-@app.get("/user-profile")
-def index_get():
-    return "GET request reveived"
+@app.get("/test")
+def get_test():
+    print("leaderboard data fetched")
+    leaderboard_data = [
+        {"id": 1, "username": "Player 1", "level": 5, "score": 100},
+        {"id": 2, "username": "Player 2", "level": 4, "score": 90},
+        {"id": 3, "username": "Player 3", "level": 3, "score": 80},
+        {"id": 4, "username": "Player 4", "level": 2, "score": 70},
+    ]
+    return jsonify(leaderboard_data)
 
 
 @app.post("/login")
@@ -97,18 +99,28 @@ def update_steps():
 
 @app.get("/leaderboard")
 def get_leaderboard():
-    try:
-        with pg2.connect(DATABASE_URL) as connection:
-            with connection.cursor() as cursor:
-                cursor.execute(sql_queries.get_sorted_leaderboard)
-                sorted_leaderboard = cursor.fetchall()
-        response = [
-            {"username": row[0], "level": row[1], "steps": row[2]}
-            for row in sorted_leaderboard
-        ]
-        return jsonify({"final leaderboard": response})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    print("leaderboard data fetched")
+    leaderboard_data = [
+        {"id": 1, "username": "Player 1", "level": 5, "score": 100},
+        {"id": 2, "username": "Player 2", "level": 4, "score": 90},
+        {"id": 3, "username": "Player 3", "level": 3, "score": 80},
+        {"id": 4, "username": "Player 4", "level": 2, "score": 70},
+    ]
+    return jsonify(leaderboard_data)
+
+
+# try:
+#     with pg2.connect(DATABASE_URL) as connection:
+#         with connection.cursor() as cursor:
+#             cursor.execute(sql_queries.get_sorted_leaderboard)
+#             sorted_leaderboard = cursor.fetchall()
+#     response = [
+#         {"username": row[0], "level": row[1], "steps": row[2]}
+#         for row in sorted_leaderboard
+#     ]
+#     return jsonify({"final leaderboard": response})
+# except Exception as e:
+#     return jsonify({"error": str(e)}), 500
 
 
 @app.post("/leaderboard")
@@ -117,13 +129,14 @@ def post_leaderboard():
     username = data.get("username")
     steps = data.get("steps")
     level = data.get("level")
+    googleid = data.get("googleid")
 
     try:
         with pg2.connect(DATABASE_URL) as connection:
             with connection.cursor() as cursor:
                 cursor.execute(
-                    "INSERT INTO leaderboard (username, steps, level) VALUES (%s, %s, %s)",
-                    (username, steps, level),
+                    "INSERT INTO users (googleid, username, steps, level) VALUES (%s, %s, %s, %s)",
+                    (googleid, username, steps, level),
                 )
                 connection.commit()
         return jsonify({"message": "leaderboard updated"})
