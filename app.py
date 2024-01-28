@@ -99,28 +99,30 @@ def update_steps():
 
 @app.get("/leaderboard")
 def get_leaderboard():
-    print("leaderboard data fetched")
-    leaderboard_data = [
-        {"id": 1, "username": "Player 1", "level": 5, "score": 100},
-        {"id": 2, "username": "Player 2", "level": 4, "score": 90},
-        {"id": 3, "username": "Player 3", "level": 3, "score": 80},
-        {"id": 4, "username": "Player 4", "level": 2, "score": 70},
-    ]
-    return jsonify(leaderboard_data)
+    print("breakpoint1")
+    try:
+        with pg2.connect(DATABASE_URL) as connection:
+            with connection.cursor() as cursor:
+                query = """
+                SELECT username, LEVEL, steps
+                FROM USERS 
+                ORDER BY level DESC, steps DESC;
+                """
+                cursor.execute(query)
+                leaderboard_data = cursor.fetchall()
 
-
-# try:
-#     with pg2.connect(DATABASE_URL) as connection:
-#         with connection.cursor() as cursor:
-#             cursor.execute(sql_queries.get_sorted_leaderboard)
-#             sorted_leaderboard = cursor.fetchall()
-#     response = [
-#         {"username": row[0], "level": row[1], "steps": row[2]}
-#         for row in sorted_leaderboard
-#     ]
-#     return jsonify({"final leaderboard": response})
-# except Exception as e:
-#     return jsonify({"error": str(e)}), 500
+        leaderboard_entries = []
+        for row in leaderboard_data:
+            leaderboard_entry = {
+                "id": hash(row["username"]),
+                "username": row["username"],
+                "level": row["level"],
+                "steps": row["steps"],
+            }
+            leaderboard_entries.append(leaderboard_entry)
+        return jsonify(leaderboard_entries), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.post("/leaderboard")
