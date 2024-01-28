@@ -112,14 +112,16 @@ def get_leaderboard():
                 leaderboard_data = cursor.fetchall()
 
         leaderboard_entries = []
+        id = 1
         for row in leaderboard_data:
             leaderboard_entry = {
-                "id": hash(row["username"]),
-                "username": row["username"],
-                "level": row["level"],
-                "steps": row["steps"],
+                "id": id,
+                "username": row[0],
+                "level": row[1],
+                "score": row[2],
             }
             leaderboard_entries.append(leaderboard_entry)
+            id += 1
         return jsonify(leaderboard_entries), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
