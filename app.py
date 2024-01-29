@@ -22,18 +22,6 @@ app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=7)
 jwt = JWTManager(app)
 
 
-@app.get("/test")
-def get_test():
-    print("leaderboard data fetched")
-    leaderboard_data = [
-        {"id": 1, "username": "Player 1", "level": 5, "score": 100},
-        {"id": 2, "username": "Player 2", "level": 4, "score": 90},
-        {"id": 3, "username": "Player 3", "level": 3, "score": 80},
-        {"id": 4, "username": "Player 4", "level": 2, "score": 70},
-    ]
-    return jsonify(leaderboard_data)
-
-
 @app.post("/login")
 def login():
     data = request.get_json()
@@ -123,27 +111,6 @@ def get_leaderboard():
             leaderboard_entries.append(leaderboard_entry)
             id += 1
         return jsonify(leaderboard_entries), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-@app.post("/leaderboard")
-def post_leaderboard():
-    data = request.get_json()
-    username = data.get("username")
-    steps = data.get("steps")
-    level = data.get("level")
-    googleid = data.get("googleid")
-
-    try:
-        with pg2.connect(DATABASE_URL) as connection:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "INSERT INTO users (googleid, username, steps, level) VALUES (%s, %s, %s, %s)",
-                    (googleid, username, steps, level),
-                )
-                connection.commit()
-        return jsonify({"message": "leaderboard updated"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
