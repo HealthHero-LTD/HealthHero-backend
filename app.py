@@ -22,16 +22,6 @@ app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=7)
 jwt = JWTManager(app)
 
 
-@app.route("/")
-def hello():
-    return "hello"
-
-
-@app.get("/user-profile")
-def index_get():
-    return "GET request reveived"
-
-
 @app.post("/login")
 def login():
     data = request.get_json()
@@ -45,7 +35,6 @@ def login():
         print(googleid)
     except ValueError as e:
         return jsonify({"error": e}), 401
-
 
     try:
         with pg2.connect(DATABASE_URL) as connection:
@@ -96,11 +85,34 @@ def update_steps():
         return jsonify({"error": str(e)}), 500
 
 
-@app.get("/steps")
-@jwt_required()
-def steps():
-    return "hey"
+@app.get("/leaderboard")
+def get_leaderboard():
+    print("breakpoint1")
+    try:
+        with pg2.connect(DATABASE_URL) as connection:
+            with connection.cursor() as cursor:
+                query = """
+                SELECT username, LEVEL, steps
+                FROM USERS 
+                ORDER BY level DESC, steps DESC;
+                """
+                cursor.execute(query)
+                leaderboard_data = cursor.fetchall()
 
+        leaderboard_entries = []
+        id = 1
+        for row in leaderboard_data:
+            leaderboard_entry = {
+                "id": id,
+                "username": row[0],
+                "level": row[1],
+                "score": row[2],
+            }
+            leaderboard_entries.append(leaderboard_entry)
+            id += 1
+        return jsonify(leaderboard_entries), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":
