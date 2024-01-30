@@ -32,7 +32,9 @@ def login():
             data["idToken"], requests.Request(), CLIENT_ID
         )
         googleid = idinfo["sub"]
+        expiration_time = idinfo["exp"]
         print(googleid)
+        print(expiration_time)
     except ValueError as e:
         return jsonify({"error": e}), 401
 
@@ -51,6 +53,7 @@ def login():
                             "access_token": access_token,
                             "message": "user already exists",
                             "GoogleID": googleid,
+                            "expiration_time": expiration_time,
                         }
                     )
                 else:
@@ -61,6 +64,7 @@ def login():
                 "access_token": access_token,
                 "message": "data inserted successfully",
                 "googleID": googleid,
+                "expiration_time": expiration_time,
             }
         )
     except Exception as e:
