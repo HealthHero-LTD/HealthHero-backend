@@ -18,8 +18,8 @@ SET token = %s
 WHERE username = %s;
 """
 
-insert_googleid_users = """
-INSERT INTO users (googleid, steps) 
+insert_token_id = """
+INSERT INTO users (token_id, email) 
 VALUES (%s, %s);
 """
 

@@ -31,10 +31,12 @@ def login():
         idinfo = id_token.verify_oauth2_token(
             data["idToken"], requests.Request(), CLIENT_ID
         )
-        googleid = idinfo["sub"]
+        token_id = idinfo["sub"]
         expiration_time = idinfo["exp"]
-        print(googleid)
+        user_email = idinfo["email"]
+        print(token_id)
         print(expiration_time)
+        print(user_email)
     except ValueError as e:
         return jsonify({"error": e}), 401
 
@@ -42,28 +44,28 @@ def login():
         with pg2.connect(DATABASE_URL) as connection:
             with connection.cursor() as cursor:
                 cursor.execute(
-                    "SELECT googleid FROM users WHERE googleid=%s", (googleid,)
+                    "SELECT token_id FROM users WHERE token_id=%s", (token_id,)
                 )
-                googleid_exist = cursor.fetchone()
-                access_token = create_access_token(identity=googleid)
+                token_id_exist = cursor.fetchone()
+                access_token = create_access_token(identity=token_id)
 
-                if googleid_exist:
+                if token_id_exist:
                     return jsonify(
                         {
                             "access_token": access_token,
                             "message": "user already exists",
-                            "GoogleID": googleid,
+                            "GoogleID": token_id,
                             "expiration_time": expiration_time,
                         }
                     )
                 else:
-                    cursor.execute(sql_queries.insert_googleid_users, (googleid, 200))
+                    cursor.execute(sql_queries.insert_token_id, (token_id, user_email))
                     connection.commit()
         return jsonify(
             {
                 "access_token": access_token,
                 "message": "data inserted successfully",
-                "googleID": googleid,
+                "googleID": token_id,
                 "expiration_time": expiration_time,
             }
         )
