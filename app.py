@@ -50,23 +50,24 @@ def login():
                 access_token = create_access_token(identity=token_id)
 
                 if token_id_exist:
+                    print("br1")
                     return jsonify(
                         {
                             "access_token": access_token,
                             "message": "user already exists",
-                            "GoogleID": token_id,
-                            "expiration_time": expiration_time,
+                            "token_id": token_id,
                         }
                     )
                 else:
                     cursor.execute(sql_queries.insert_token_id, (token_id, user_email))
                     connection.commit()
+                    print("br2")
+        print("br3")
         return jsonify(
             {
                 "access_token": access_token,
                 "message": "data inserted successfully",
-                "googleID": token_id,
-                "expiration_time": expiration_time,
+                "token_id": token_id,
             }
         )
     except Exception as e:
@@ -98,8 +99,8 @@ def get_leaderboard():
         with pg2.connect(DATABASE_URL) as connection:
             with connection.cursor() as cursor:
                 query = """
-                SELECT username, LEVEL, steps
-                FROM USERS 
+                SELECT username, level, steps
+                FROM leaderboard 
                 ORDER BY level DESC, steps DESC;
                 """
                 cursor.execute(query)
@@ -117,6 +118,42 @@ def get_leaderboard():
             leaderboard_entries.append(leaderboard_entry)
             id += 1
         return jsonify(leaderboard_entries), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.post("/set-username")
+@jwt_required()
+def set_username():
+    print("set1")
+    try:
+        current_user_token_id = get_jwt_identity()
+        print(current_user_token_id)
+
+        data = request.get_json()
+        username = data.get("username")
+        print(username)
+
+        with pg2.connect(DATABASE_URL) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT username FROM users WHERE username = %s LIMIT 1",
+                    (username,),
+                )
+                existing_username = cursor.fetchone()
+
+                if existing_username:
+                    print(existing_username)
+                    return jsonify({"error": "username already exists"}), 400
+
+                cursor.execute(
+                    "UPDATE users SET username = %s WHERE token_id = %s",
+                    (username, current_user_token_id),
+                )
+                connection.commit()
+
+        return jsonify({"message": "username updated successfully"}), 200
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
