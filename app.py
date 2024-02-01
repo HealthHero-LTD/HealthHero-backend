@@ -25,17 +25,13 @@ jwt = JWTManager(app)
 @app.post("/login")
 def login():
     data = request.get_json()
-    print(f"received data: {data}")
-    print(data.get("idToken"))
     try:
         idinfo = id_token.verify_oauth2_token(
             data["idToken"], requests.Request(), CLIENT_ID
         )
         token_id = idinfo["sub"]
-        expiration_time = idinfo["exp"]
         user_email = idinfo["email"]
         print(token_id)
-        print(expiration_time)
         print(user_email)
     except ValueError as e:
         return jsonify({"error": e}), 401
@@ -47,10 +43,11 @@ def login():
                     "SELECT token_id FROM users WHERE token_id=%s", (token_id,)
                 )
                 token_id_exist = cursor.fetchone()
-                access_token = create_access_token(identity=token_id)
+                access_token = create_access_token(
+                    identity=token_id
+                )  # Health Hero token
 
                 if token_id_exist:
-                    print("br1")
                     return jsonify(
                         {
                             "access_token": access_token,
@@ -61,8 +58,6 @@ def login():
                 else:
                     cursor.execute(sql_queries.insert_token_id, (token_id, user_email))
                     connection.commit()
-                    print("br2")
-        print("br3")
         return jsonify(
             {
                 "access_token": access_token,
@@ -94,7 +89,6 @@ def update_steps():
 
 @app.get("/leaderboard")
 def get_leaderboard():
-    print("breakpoint1")
     try:
         with pg2.connect(DATABASE_URL) as connection:
             with connection.cursor() as cursor:
@@ -125,10 +119,8 @@ def get_leaderboard():
 @app.post("/set-username")
 @jwt_required()
 def set_username():
-    print("set1")
     try:
         current_user_token_id = get_jwt_identity()
-        print(current_user_token_id)
 
         data = request.get_json()
         username = data.get("username")
@@ -143,7 +135,6 @@ def set_username():
                 existing_username = cursor.fetchone()
 
                 if existing_username:
-                    print(existing_username)
                     return jsonify({"error": "username already exists"}), 400
 
                 cursor.execute(
