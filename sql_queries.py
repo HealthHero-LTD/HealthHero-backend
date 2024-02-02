@@ -18,8 +18,8 @@ SET token = %s
 WHERE username = %s;
 """
 
-insert_googleid_users = """
-INSERT INTO users (googleid, steps) 
+insert_user_id = """
+INSERT INTO users (user_id, email) 
 VALUES (%s, %s);
 """
 
@@ -28,10 +28,10 @@ INSERT INTO "users" (googleid)
 VALUES (%s);
 """
 
-update_googleID = """
+update_user_id = """
 UPDATE "users"
 SET steps = %s
-WHERE googleid = %s;
+WHERE user_id = %s;
 """
 
 get_sorted_leaderboard = """

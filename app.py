@@ -25,44 +25,46 @@ jwt = JWTManager(app)
 @app.post("/login")
 def login():
     data = request.get_json()
-    print(f"received data: {data}")
-    print(data.get("idToken"))
     try:
         idinfo = id_token.verify_oauth2_token(
             data["idToken"], requests.Request(), CLIENT_ID
         )
-        googleid = idinfo["sub"]
-        print(googleid)
+        user_id = idinfo["sub"]
+        user_email = idinfo["email"]
+        print(user_id)
+        print(user_email)
+
     except ValueError as e:
         return jsonify({"error": e}), 401
 
     try:
         with pg2.connect(DATABASE_URL) as connection:
             with connection.cursor() as cursor:
-                cursor.execute(
-                    "SELECT googleid FROM users WHERE googleid=%s", (googleid,)
-                )
-                googleid_exist = cursor.fetchone()
-                access_token = create_access_token(identity=googleid)
+                cursor.execute("SELECT user_id FROM users WHERE user_id=%s", (user_id,))
+                user_id_exist = cursor.fetchone()
+                access_token = create_access_token(
+                    identity=user_id
+                )  # Health Hero token
 
-                if googleid_exist:
+                if user_id_exist:
                     return jsonify(
                         {
                             "access_token": access_token,
                             "message": "user already exists",
-                            "GoogleID": googleid,
+                            "token_id": user_id,
                         }
                     )
                 else:
-                    cursor.execute(sql_queries.insert_googleid_users, (googleid, 200))
+                    cursor.execute(sql_queries.insert_user_id, (user_id, user_email))
                     connection.commit()
         return jsonify(
             {
                 "access_token": access_token,
                 "message": "data inserted successfully",
-                "googleID": googleid,
+                "token_id": user_id,
             }
         )
+
     except Exception as e:
         return jsonify({"error": str(e)})
 
@@ -87,13 +89,12 @@ def update_steps():
 
 @app.get("/leaderboard")
 def get_leaderboard():
-    print("breakpoint1")
     try:
         with pg2.connect(DATABASE_URL) as connection:
             with connection.cursor() as cursor:
                 query = """
-                SELECT username, LEVEL, steps
-                FROM USERS 
+                SELECT username, level, steps
+                FROM leaderboard 
                 ORDER BY level DESC, steps DESC;
                 """
                 cursor.execute(query)
@@ -111,6 +112,38 @@ def get_leaderboard():
             leaderboard_entries.append(leaderboard_entry)
             id += 1
         return jsonify(leaderboard_entries), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.post("/set-username")
+@jwt_required()
+def set_username():
+    try:
+        current_user_token_id = get_jwt_identity()
+        data = request.get_json()
+        username = data.get("username")
+        print(username)
+
+        with pg2.connect(DATABASE_URL) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT username FROM users WHERE username = %s LIMIT 1",
+                    (username,),
+                )
+                existing_username = cursor.fetchone()
+
+                if existing_username:
+                    return jsonify({"error": "username already exists"}), 400
+
+                cursor.execute(
+                    "UPDATE users SET username = %s WHERE user_id = %s",
+                    (username, current_user_token_id),
+                )
+                connection.commit()
+        return jsonify({"message": "username updated successfully"}), 200
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
