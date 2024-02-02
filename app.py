@@ -29,42 +29,42 @@ def login():
         idinfo = id_token.verify_oauth2_token(
             data["idToken"], requests.Request(), CLIENT_ID
         )
-        token_id = idinfo["sub"]
+        user_id = idinfo["sub"]
         user_email = idinfo["email"]
-        print(token_id)
+        print(user_id)
         print(user_email)
+
     except ValueError as e:
         return jsonify({"error": e}), 401
 
     try:
         with pg2.connect(DATABASE_URL) as connection:
             with connection.cursor() as cursor:
-                cursor.execute(
-                    "SELECT token_id FROM users WHERE token_id=%s", (token_id,)
-                )
-                token_id_exist = cursor.fetchone()
+                cursor.execute("SELECT user_id FROM users WHERE user_id=%s", (user_id,))
+                user_id_exist = cursor.fetchone()
                 access_token = create_access_token(
-                    identity=token_id
+                    identity=user_id
                 )  # Health Hero token
 
-                if token_id_exist:
+                if user_id_exist:
                     return jsonify(
                         {
                             "access_token": access_token,
                             "message": "user already exists",
-                            "token_id": token_id,
+                            "token_id": user_id,
                         }
                     )
                 else:
-                    cursor.execute(sql_queries.insert_token_id, (token_id, user_email))
+                    cursor.execute(sql_queries.insert_user_id, (user_id, user_email))
                     connection.commit()
         return jsonify(
             {
                 "access_token": access_token,
                 "message": "data inserted successfully",
-                "token_id": token_id,
+                "token_id": user_id,
             }
         )
+
     except Exception as e:
         return jsonify({"error": str(e)})
 
@@ -112,6 +112,7 @@ def get_leaderboard():
             leaderboard_entries.append(leaderboard_entry)
             id += 1
         return jsonify(leaderboard_entries), 200
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -121,7 +122,6 @@ def get_leaderboard():
 def set_username():
     try:
         current_user_token_id = get_jwt_identity()
-
         data = request.get_json()
         username = data.get("username")
         print(username)
@@ -138,11 +138,10 @@ def set_username():
                     return jsonify({"error": "username already exists"}), 400
 
                 cursor.execute(
-                    "UPDATE users SET username = %s WHERE token_id = %s",
+                    "UPDATE users SET username = %s WHERE user_id = %s",
                     (username, current_user_token_id),
                 )
                 connection.commit()
-
         return jsonify({"message": "username updated successfully"}), 200
 
     except Exception as e:
