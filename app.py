@@ -124,7 +124,6 @@ def set_username():
         current_user_token_id = get_jwt_identity()
         data = request.get_json()
         username = data.get("username")
-        print(username)
 
         with pg2.connect(DATABASE_URL) as connection:
             with connection.cursor() as cursor:
