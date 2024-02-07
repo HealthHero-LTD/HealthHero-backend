@@ -147,5 +147,37 @@ def set_username():
         return jsonify({"error": str(e)}), 500
 
 
+@app.post("/update-xp")
+@jwt_required()
+def update_XP():
+    try:
+        current_user_id = get_jwt_identity()
+        data = request.get_json()
+        xp_values = []
+
+        for entry in data:
+            if "xp" in entry:
+                xp_values.append(entry["xp"])
+
+        total_xp = sum(xp_values)
+
+        with pg2.connect(DATABASE_URL) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    UPDATE users
+                    SET xp = %s
+                    WHERE user_id = %s
+                    """,
+                    (total_xp, current_user_id),
+                )
+        connection.commit()
+
+        return jsonify({"message": "XP updated successfully."})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=6969, debug=True)
