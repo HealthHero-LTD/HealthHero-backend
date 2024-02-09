@@ -4,6 +4,7 @@ import sql_queries
 import db_management as dbm
 from flask import Flask, request, jsonify
 from datetime import timedelta
+from datetime import datetime
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from flask_jwt_extended import create_access_token
@@ -153,16 +154,15 @@ def update_XP():
     try:
         current_user_id = get_jwt_identity()
         data = request.get_json()
-        xp_values = []
-
-        for entry in data:
-            if "xp" in entry:
-                xp_values.append(entry["xp"])
-
-        total_xp = sum(xp_values)
+        xp_data = [
+            (entry["xp"], entry["date"])
+            for entry in data
+            if "xp" in entry and "date" in entry
+        ]
 
         with pg2.connect(DATABASE_URL) as connection:
             with connection.cursor() as cursor:
+                total_xp = sum(xp for xp, _ in xp_data)
                 cursor.execute(
                     """
                     UPDATE users
@@ -171,12 +171,44 @@ def update_XP():
                     """,
                     (total_xp, current_user_id),
                 )
+                print("ch2")
+
+                # for xp, date in xp_data:
+                #     cursor.execute(
+                #         """
+                #         INSERT INTO daily (user_id, daily_xp, daily_date)
+                #         VALUES (%s, %s, %s)
+                #         """,
+                #         (current_user_id, xp, date),
+                # )
+
         connection.commit()
 
         return jsonify({"message": "XP updated successfully."})
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    #     for entry in data:
+    #         if "xp" in entry:
+    #             xp_data.append(entry["xp"])
+
+    #     total_xp = sum(xp_data)
+
+    #     with pg2.connect(DATABASE_URL) as connection:
+    #         with connection.cursor() as cursor:
+    #             cursor.execute(
+    #                 """
+    #                 UPDATE users
+    #                 SET xp = %s
+    #                 WHERE user_id = %s
+    #                 """,
+    #                 (total_xp, current_user_id),
+    #             )
+    #     connection.commit()
+
+    #     return jsonify({"message": "XP updated successfully."})
+
+    # except Exception as e:
+    #     return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":
