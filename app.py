@@ -167,6 +167,7 @@ def update_XP():
 
         with pg2.connect(DATABASE_URL) as connection:
             with connection.cursor() as cursor:
+                # update 'users' table
                 total_xp = sum(xp for xp, _ in xp_data)
                 cursor.execute(
                     """
@@ -177,8 +178,8 @@ def update_XP():
                     (total_xp, current_user_id),
                 )
 
+                # update 'daily' table
                 for xp, date in xp_data:
-                    print(xp, date)
                     cursor.execute(
                         """
                         INSERT INTO daily (user_id, daily_xp, daily_date)
