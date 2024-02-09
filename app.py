@@ -4,6 +4,7 @@ import sql_queries
 import db_management as dbm
 from flask import Flask, request, jsonify
 from datetime import timedelta
+import datetime
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from flask_jwt_extended import create_access_token
@@ -124,7 +125,6 @@ def set_username():
         current_user_token_id = get_jwt_identity()
         data = request.get_json()
         username = data.get("username")
-        print(username)
 
         with pg2.connect(DATABASE_URL) as connection:
             with connection.cursor() as cursor:
@@ -143,6 +143,56 @@ def set_username():
                 )
                 connection.commit()
         return jsonify({"message": "username updated successfully"}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.post("/update-xp")
+@jwt_required()
+def update_XP():
+    try:
+        current_user_id = get_jwt_identity()
+        data = request.get_json()
+
+        # conver unix timestamp to YYYY-MM-DD
+        xp_data = [
+            (
+                entry["xp"],
+                datetime.datetime.fromtimestamp(entry["date"]).strftime("%Y-%m-%d"),
+            )
+            for entry in data
+            if "xp" in entry and "date" in entry
+        ]
+
+        with pg2.connect(DATABASE_URL) as connection:
+            with connection.cursor() as cursor:
+                # update 'users' table
+                total_xp = sum(xp for xp, _ in xp_data)
+                cursor.execute(
+                    """
+                    UPDATE users
+                    SET xp = %s
+                    WHERE user_id = %s
+                    """,
+                    (total_xp, current_user_id),
+                )
+
+                # update 'daily' table
+                for xp, date in xp_data:
+                    cursor.execute(
+                        """
+                        INSERT INTO daily (user_id, daily_xp, daily_date)
+                        VALUES (%s, %s, %s)
+                        ON CONFLICT (user_id, daily_date)
+                        DO UPDATE SET daily_xp = %s
+                        """,
+                        (current_user_id, xp, date, xp),
+                    )
+
+        connection.commit()
+
+        return jsonify({"message": "XP updated successfully."})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
