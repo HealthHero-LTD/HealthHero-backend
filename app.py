@@ -156,7 +156,7 @@ def update_XP():
         data = request.get_json()
 
         # conver unix timestamp to YYYY-MM-DD
-        xp_data = xp_data = [
+        xp_data = [
             (
                 entry["xp"],
                 datetime.datetime.fromtimestamp(entry["date"]).strftime("%Y-%m-%d"),
