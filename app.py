@@ -70,24 +70,6 @@ def login():
         return jsonify({"error": str(e)})
 
 
-@app.get("/update_steps")
-@jwt_required()
-def update_steps():
-    try:
-        current_user = get_jwt_identity()
-        with pg2.connect(DATABASE_URL) as connection:
-            with connection.cursor() as cursor:
-                new_steps = request.json.get("steps")
-                update_query = "UPDATE users SET steps = %s WHERE googleid=%s"
-                cursor.execute(update_query, (new_steps, current_user))
-                connection.commit()
-
-                return jsonify(message="steps updated"), new_steps
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
 @app.get("/leaderboard")
 def get_leaderboard():
     try:
