@@ -16,6 +16,7 @@ from flask_jwt_extended import JWTManager
 DATABASE_URL = dbm.DATABASE_URL
 SECRET_KEY = dbm.SECRET_KEY
 CLIENT_ID = os.getenv("CLIENT_ID")
+
 app = Flask(__name__)
 
 app.config["JWT_SECRET_KEY"] = "super-secret"
@@ -32,9 +33,6 @@ def login():
         )
         user_id = idinfo["sub"]
         user_email = idinfo["email"]
-        print(user_id)
-        print(user_email)
-
     except ValueError as e:
         return jsonify({"error": e}), 401
 
@@ -65,7 +63,6 @@ def login():
                 "token_id": user_id,
             }
         )
-
     except Exception as e:
         return jsonify({"error": str(e)})
 
@@ -95,7 +92,6 @@ def get_leaderboard():
             leaderboard_entries.append(leaderboard_entry)
             id += 1
         return jsonify(leaderboard_entries), 200
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -125,7 +121,6 @@ def set_username():
                 )
                 connection.commit()
         return jsonify({"message": "username updated successfully"}), 200
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -171,11 +166,8 @@ def update_XP():
                         """,
                         (current_user_id, xp, date, xp),
                     )
-
         connection.commit()
-
         return jsonify({"message": "XP updated successfully."})
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
