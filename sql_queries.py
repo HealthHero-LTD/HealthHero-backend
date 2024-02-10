@@ -1,41 +1,39 @@
-create_user_table_query = """
-CREATE TABLE IF NOT EXISTS "user-profile" (
-    username VARCHAR(50) PRIMARY KEY,
-    google_email_address VARCHAR(50) UNIQUE,
-    steps INTEGER,
-    token VARCHAR(256)
-);
+check_login_user_id = """
+SELECT user_id FROM users WHERE user_id=%s
 """
 
-insert_user_query = """
-INSERT INTO "user-profile" (username, google_email_address, steps)
-VALUES (%s, %s, %s);
-"""
-
-update_token_query = """
-UPDATE "user-profile"
-SET token = %s
-WHERE username = %s;
-"""
-
-insert_user_id = """
+insert_login_user_id = """
 INSERT INTO users (user_id, email) 
 VALUES (%s, %s);
 """
 
-insert_login_user = """
-INSERT INTO "users" (googleid)
-VALUES (%s);
+fetch_leaderboard = """
+SELECT username, level, xp
+FROM users 
+ORDER BY level DESC, xp DESC;
 """
 
-update_user_id = """
-UPDATE "users"
-SET steps = %s
-WHERE user_id = %s;
+check_username = """
+SELECT username 
+FROM users 
+WHERE username = %s LIMIT 1
 """
 
-get_sorted_leaderboard = """
-SELECT username, "level", steps 
-FROM LEADERBOARD 
-ORDER BY "level" DESC, STEPS DESC;
+update_username = """
+UPDATE users 
+SET username = %s 
+WHERE user_id = %s
+"""
+
+update_users_xp = """
+UPDATE users
+SET xp = %s
+WHERE user_id = %s
+"""
+
+insert_daily_xp = """
+INSERT INTO daily (user_id, daily_xp, daily_date)
+VALUES (%s, %s, %s)
+ON CONFLICT (user_id, daily_date)
+DO UPDATE SET daily_xp = %s
 """

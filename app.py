@@ -16,6 +16,7 @@ from flask_jwt_extended import JWTManager
 DATABASE_URL = dbm.DATABASE_URL
 SECRET_KEY = dbm.SECRET_KEY
 CLIENT_ID = os.getenv("CLIENT_ID")
+
 app = Flask(__name__)
 
 app.config["JWT_SECRET_KEY"] = "super-secret"
@@ -32,16 +33,13 @@ def login():
         )
         user_id = idinfo["sub"]
         user_email = idinfo["email"]
-        print(user_id)
-        print(user_email)
-
     except ValueError as e:
         return jsonify({"error": e}), 401
 
     try:
         with pg2.connect(DATABASE_URL) as connection:
             with connection.cursor() as cursor:
-                cursor.execute("SELECT user_id FROM users WHERE user_id=%s", (user_id,))
+                cursor.execute(sql_queries.check_login_user_id, (user_id,))
                 user_id_exist = cursor.fetchone()
                 access_token = create_access_token(
                     identity=user_id
@@ -56,7 +54,9 @@ def login():
                         }
                     )
                 else:
-                    cursor.execute(sql_queries.insert_user_id, (user_id, user_email))
+                    cursor.execute(
+                        sql_queries.insert_login_user_id, (user_id, user_email)
+                    )
                     connection.commit()
         return jsonify(
             {
@@ -65,27 +65,8 @@ def login():
                 "token_id": user_id,
             }
         )
-
     except Exception as e:
         return jsonify({"error": str(e)})
-
-
-@app.get("/update_steps")
-@jwt_required()
-def update_steps():
-    try:
-        current_user = get_jwt_identity()
-        with pg2.connect(DATABASE_URL) as connection:
-            with connection.cursor() as cursor:
-                new_steps = request.json.get("steps")
-                update_query = "UPDATE users SET steps = %s WHERE googleid=%s"
-                cursor.execute(update_query, (new_steps, current_user))
-                connection.commit()
-
-                return jsonify(message="steps updated"), new_steps
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 
 @app.get("/leaderboard")
@@ -93,12 +74,7 @@ def get_leaderboard():
     try:
         with pg2.connect(DATABASE_URL) as connection:
             with connection.cursor() as cursor:
-                query = """
-                SELECT username, level, steps
-                FROM leaderboard 
-                ORDER BY level DESC, steps DESC;
-                """
-                cursor.execute(query)
+                cursor.execute(sql_queries.fetch_leaderboard)
                 leaderboard_data = cursor.fetchall()
 
         leaderboard_entries = []
@@ -113,7 +89,6 @@ def get_leaderboard():
             leaderboard_entries.append(leaderboard_entry)
             id += 1
         return jsonify(leaderboard_entries), 200
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -129,7 +104,7 @@ def set_username():
         with pg2.connect(DATABASE_URL) as connection:
             with connection.cursor() as cursor:
                 cursor.execute(
-                    "SELECT username FROM users WHERE username = %s LIMIT 1",
+                    sql_queries.check_username,
                     (username,),
                 )
                 existing_username = cursor.fetchone()
@@ -138,12 +113,11 @@ def set_username():
                     return jsonify({"error": "username already exists"}), 400
 
                 cursor.execute(
-                    "UPDATE users SET username = %s WHERE user_id = %s",
+                    sql_queries.update_username,
                     (username, current_user_token_id),
                 )
                 connection.commit()
         return jsonify({"message": "username updated successfully"}), 200
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -170,30 +144,18 @@ def update_XP():
                 # update 'users' table
                 total_xp = sum(xp for xp, _ in xp_data)
                 cursor.execute(
-                    """
-                    UPDATE users
-                    SET xp = %s
-                    WHERE user_id = %s
-                    """,
+                    sql_queries.update_users_xp,
                     (total_xp, current_user_id),
                 )
 
                 # update 'daily' table
                 for xp, date in xp_data:
                     cursor.execute(
-                        """
-                        INSERT INTO daily (user_id, daily_xp, daily_date)
-                        VALUES (%s, %s, %s)
-                        ON CONFLICT (user_id, daily_date)
-                        DO UPDATE SET daily_xp = %s
-                        """,
+                        sql_queries.insert_daily_xp,
                         (current_user_id, xp, date, xp),
                     )
-
         connection.commit()
-
         return jsonify({"message": "XP updated successfully."})
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
