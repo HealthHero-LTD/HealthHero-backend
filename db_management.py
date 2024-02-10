@@ -1,6 +1,3 @@
-import psycopg2 as pg2
-import jwt
-import sql_queries
 import os
 
 DB_USER = os.getenv("DB_USER")
