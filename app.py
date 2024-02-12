@@ -117,7 +117,10 @@ def set_username():
                     (username, current_user_token_id),
                 )
                 connection.commit()
-        return jsonify({"message": "username updated successfully"}), 200
+        return (
+            jsonify({"username": username, "message": "username updated successfully"}),
+            200,
+        )
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
