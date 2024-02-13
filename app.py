@@ -125,12 +125,13 @@ def set_username():
         return jsonify({"error": str(e)}), 500
 
 
-@app.post("/update-xp")
+@app.post("/update-user")
 @jwt_required()
-def update_XP():
+def update_user():
     try:
         current_user_id = get_jwt_identity()
         data = request.get_json()
+        print(data)
 
         # conver unix timestamp to YYYY-MM-DD
         xp_data = [
@@ -141,9 +142,21 @@ def update_XP():
             for entry in data
             if "xp" in entry and "date" in entry
         ]
+        level = data.get("level")
+        username = data.get("username")
+        print(level, username)
 
         with pg2.connect(DATABASE_URL) as connection:
             with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    UPDATE users
+                    SET level = %s, username = %s
+                    WHERE user_id = %s
+                    """,
+                    (level, username, current_user_id),
+                )
+
                 # update 'users' table
                 total_xp = sum(xp for xp, _ in xp_data)
                 cursor.execute(
