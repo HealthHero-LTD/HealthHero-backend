@@ -149,12 +149,13 @@ def update_user():
         with pg2.connect(DATABASE_URL) as connection:
             with connection.cursor() as cursor:
                 cursor.execute(
-                    """
-                    UPDATE users
-                    SET level = %s, username = %s
-                    WHERE user_id = %s
-                    """,
-                    (level, username, current_user_id),
+                    sql_queries.update_users_level,
+                    (level, current_user_id),
+                )
+
+                cursor.execute(
+                    sql_queries.update_username,
+                    (username, current_user_id),
                 )
 
                 # update 'users' table
