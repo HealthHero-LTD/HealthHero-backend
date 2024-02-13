@@ -131,7 +131,6 @@ def update_user():
     try:
         current_user_id = get_jwt_identity()
         data = request.get_json()
-        print(data)
 
         # conver unix timestamp to YYYY-MM-DD
         xp_data = [
@@ -144,7 +143,6 @@ def update_user():
         ]
         level = data.get("level")
         username = data.get("username")
-        print(level, username)
 
         with pg2.connect(DATABASE_URL) as connection:
             with connection.cursor() as cursor:
