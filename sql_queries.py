@@ -25,6 +25,12 @@ SET username = %s
 WHERE user_id = %s
 """
 
+update_users_level = """
+UPDATE users
+SET level = %s
+WHERE user_id = %s
+"""
+
 update_users_xp = """
 UPDATE users
 SET xp = %s
