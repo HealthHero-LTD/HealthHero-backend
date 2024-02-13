@@ -142,18 +142,12 @@ def update_user():
             if "xp" in entry and "date" in entry
         ]
         level = data.get("level")
-        username = data.get("username")
 
         with pg2.connect(DATABASE_URL) as connection:
             with connection.cursor() as cursor:
                 cursor.execute(
                     sql_queries.update_users_level,
                     (level, current_user_id),
-                )
-
-                cursor.execute(
-                    sql_queries.update_username,
-                    (username, current_user_id),
                 )
 
                 # update 'users' table
