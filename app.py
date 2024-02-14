@@ -29,7 +29,7 @@ def login():
     data = request.get_json()
     try:
         idinfo = id_token.verify_oauth2_token(
-            data["idToken"], requests.Request(), CLIENT_ID
+            data["id_token"], requests.Request(), CLIENT_ID
         )
         user_id = idinfo["sub"]
         user_email = idinfo["email"]
