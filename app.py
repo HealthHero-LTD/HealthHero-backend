@@ -164,9 +164,9 @@ def update_user():
                         (current_user_id, xp, date, xp),
                     )
         connection.commit()
-        return jsonify({"message": "XP updated successfully."})
+        return jsonify({"success": True}), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 if __name__ == "__main__":
