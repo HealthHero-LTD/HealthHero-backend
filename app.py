@@ -29,7 +29,7 @@ def login():
     data = request.get_json()
     try:
         idinfo = id_token.verify_oauth2_token(
-            data["idToken"], requests.Request(), CLIENT_ID
+            data["id_token"], requests.Request(), CLIENT_ID
         )
         user_id = idinfo["sub"]
         user_email = idinfo["email"]
@@ -164,9 +164,9 @@ def update_user():
                         (current_user_id, xp, date, xp),
                     )
         connection.commit()
-        return jsonify({"message": "XP updated successfully."})
+        return jsonify({"success": True}), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 if __name__ == "__main__":
