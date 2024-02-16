@@ -80,7 +80,14 @@ def get_user():
                 sql_queries.get_user,
                 (current_user_id,),
             )
-            user = cursor.fetchall()
+            row = cursor.fetchone()
+            if row:
+                user = {
+                    "username": row[0],
+                    "level": row[1],
+                    "xp": row[2],
+                    "last_active_date": row[3],
+                }
         return jsonify(user), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
