@@ -74,7 +74,7 @@ def login():
 def get_user():
     try:
         current_user_id = get_jwt_identity()
-        print("check1")
+
         with pg2.connect(DATABASE_URL) as connection:
             with connection.cursor() as cursor:
                 cursor.execute(
@@ -82,7 +82,6 @@ def get_user():
                     (current_user_id,),
                 )
                 user = cursor.fetchall()
-        print(user)
         return jsonify(user), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
