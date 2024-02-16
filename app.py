@@ -37,8 +37,8 @@ def login():
         return jsonify({"error": e}), 401
 
     try:
-        with pg2.connect(DATABASE_URL) as connection:
-            with connection.cursor() as cursor:
+        with db_connection() as connection:
+            with db_cursor() as cursor:
                 cursor.execute(sql_queries.check_login_user_id, (user_id,))
                 user_id_exist = cursor.fetchone()
                 access_token = create_access_token(
@@ -75,13 +75,12 @@ def get_user():
     try:
         current_user_id = get_jwt_identity()
 
-        with pg2.connect(DATABASE_URL) as connection:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    sql_queries.get_user,
-                    (current_user_id,),
-                )
-                user = cursor.fetchall()
+        with db_cursor() as cursor:
+            cursor.execute(
+                sql_queries.get_user,
+                (current_user_id,),
+            )
+            user = cursor.fetchall()
         return jsonify(user), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -90,10 +89,9 @@ def get_user():
 @app.get("/leaderboard")
 def get_leaderboard():
     try:
-        with pg2.connect(DATABASE_URL) as connection:
-            with connection.cursor() as cursor:
-                cursor.execute(sql_queries.fetch_leaderboard)
-                leaderboard_data = cursor.fetchall()
+        with db_cursor() as cursor:
+            cursor.execute(sql_queries.fetch_leaderboard)
+            leaderboard_data = cursor.fetchall()
 
         leaderboard_entries = []
         id = 1
@@ -119,8 +117,8 @@ def set_username():
         data = request.get_json()
         username = data.get("username")
 
-        with pg2.connect(DATABASE_URL) as connection:
-            with connection.cursor() as cursor:
+        with db_connection() as connection:
+            with db_cursor() as cursor:
                 cursor.execute(
                     sql_queries.check_username,
                     (username,),
@@ -161,8 +159,8 @@ def update_user():
         ]
         level = data.get("level")
 
-        with pg2.connect(DATABASE_URL) as connection:
-            with connection.cursor() as cursor:
+        with db_connection() as connection:
+            with db_cursor() as cursor:
                 cursor.execute(
                     sql_queries.update_users_level,
                     (level, current_user_id),
@@ -189,3 +187,11 @@ def update_user():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=6969, debug=True)
+
+
+def db_connection():
+    return pg2.connect(DATABASE_URL)
+
+
+def db_cursor():
+    return db_connection().cursor()
