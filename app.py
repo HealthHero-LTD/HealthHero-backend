@@ -138,7 +138,7 @@ def update_user():
                 entry["xp"],
                 datetime.datetime.fromtimestamp(entry["date"]).strftime("%Y-%m-%d"),
             )
-            for entry in data
+            for entry in data.get("xp_data_array")
             if "xp" in entry and "date" in entry
         ]
         level = data.get("level")
