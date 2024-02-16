@@ -78,11 +78,7 @@ def get_user():
         with pg2.connect(DATABASE_URL) as connection:
             with connection.cursor() as cursor:
                 cursor.execute(
-                    """
-                    SELECT username, level, xp, last_active_date
-                    FROM users
-                    WHERE user_id = %s
-                    """,
+                    sql_queries.get_user,
                     (current_user_id,),
                 )
                 user = cursor.fetchall()

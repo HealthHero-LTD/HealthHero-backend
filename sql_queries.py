@@ -7,6 +7,12 @@ INSERT INTO users (user_id, email)
 VALUES (%s, %s);
 """
 
+get_user = """
+SELECT username, level, xp, last_active_date
+FROM users
+WHERE user_id = %s
+"""
+
 fetch_leaderboard = """
 SELECT username, level, xp
 FROM users 
