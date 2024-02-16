@@ -38,7 +38,7 @@ def login():
 
     try:
         with db_connection() as connection:
-            with db_cursor() as cursor:
+            with connection.cursor() as cursor:
                 cursor.execute(sql_queries.check_login_user_id, (user_id,))
                 user_id_exist = cursor.fetchone()
                 access_token = create_access_token(
@@ -88,7 +88,9 @@ def get_user():
                     "xp": row[2],
                     "last_active_date": row[3],
                 }
-        return jsonify(user), 200
+                return jsonify(user), 200
+            else:
+                return jsonify({"error": "User not found"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -125,7 +127,7 @@ def set_username():
         username = data.get("username")
 
         with db_connection() as connection:
-            with db_cursor() as cursor:
+            with connection.cursor() as cursor:
                 cursor.execute(
                     sql_queries.check_username,
                     (username,),
@@ -167,7 +169,7 @@ def update_user():
         level = data.get("level")
 
         with db_connection() as connection:
-            with db_cursor() as cursor:
+            with connection.cursor() as cursor:
                 cursor.execute(
                     sql_queries.update_users_level,
                     (level, current_user_id),
