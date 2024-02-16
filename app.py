@@ -69,6 +69,29 @@ def login():
         return jsonify({"error": str(e)})
 
 
+@app.get("/get-user")
+@jwt_required()
+def get_user():
+    try:
+        current_user_id = get_jwt_identity()
+        print("check1")
+        with pg2.connect(DATABASE_URL) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT username, level, xp, last_active_date
+                    FROM users
+                    WHERE user_id = %s
+                    """,
+                    (current_user_id,),
+                )
+                user = cursor.fetchall()
+        print(user)
+        return jsonify(user), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.get("/leaderboard")
 def get_leaderboard():
     try:
