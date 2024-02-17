@@ -43,6 +43,12 @@ SET xp = %s
 WHERE user_id = %s
 """
 
+update_users_info = """
+UPDATE users
+SET level = %s, xp = %s, last_active_date = %s
+WHERE user_id = %s;
+"""
+
 insert_daily_xp = """
 INSERT INTO daily (user_id, daily_xp, daily_date)
 VALUES (%s, %s, %s)

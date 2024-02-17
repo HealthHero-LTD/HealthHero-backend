@@ -167,8 +167,9 @@ def update_user():
             if "xp" in entry and "date" in entry
         ]
         level = data.get("level")
+        last_active_timestamp = data.get("last_active_date")
         last_active_date = datetime.datetime.fromtimestamp(
-            data.get("last_active_date")
+            last_active_timestamp
         ).strftime("%Y-%m-%d")
         xp = data.get("xp")
 
@@ -180,15 +181,8 @@ def update_user():
         with db_connection() as connection:
             with connection.cursor() as cursor:
                 cursor.execute(
-                    sql_queries.update_users_level,
-                    (level, current_user_id),
-                )
-
-                # update 'users' table
-                total_xp = sum(xp for xp, _ in xp_data)
-                cursor.execute(
-                    sql_queries.update_users_xp,
-                    (total_xp, current_user_id),
+                    sql_queries.update_users_info,
+                    (level, xp, last_active_date, current_user_id),
                 )
 
                 # update 'daily' table
