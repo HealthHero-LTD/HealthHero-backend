@@ -31,18 +31,6 @@ SET username = %s
 WHERE user_id = %s
 """
 
-update_users_level = """
-UPDATE users
-SET level = %s
-WHERE user_id = %s
-"""
-
-update_users_xp = """
-UPDATE users
-SET xp = %s
-WHERE user_id = %s
-"""
-
 update_users_info = """
 UPDATE users
 SET level = %s, xp = %s, last_active_date = %s

@@ -82,11 +82,12 @@ def get_user():
             )
             row = cursor.fetchone()
             if row:
+                last_active_date = row[3].strftime("%Y-%m-%d") if row[3] else None
                 user = {
                     "username": row[0],
                     "level": row[1],
                     "xp": row[2],
-                    "last_active_date": row[3],
+                    "last_active_date": last_active_date,
                 }
                 return jsonify(user), 200
             else:
@@ -167,19 +168,14 @@ def update_user():
             if "xp" in entry and "date" in entry
         ]
         level = data.get("level")
-        last_active_timestamp = data.get("last_active_date")
         last_active_date = datetime.datetime.fromtimestamp(
-            last_active_timestamp
+            data.get("last_active_date")
         ).strftime("%Y-%m-%d")
         xp = data.get("xp")
 
-        print(f"this is received user data: {xp_data}")
-        print(f"new received data: {data}")
-        print(f"last acitve date: {last_active_date}")
-        print(f"updated user xp: {xp}")
-
         with db_connection() as connection:
             with connection.cursor() as cursor:
+                # Update 'users' table
                 cursor.execute(
                     sql_queries.update_users_info,
                     (level, xp, last_active_date, current_user_id),
@@ -192,7 +188,6 @@ def update_user():
                         (current_user_id, xp, date, xp),
                     )
         connection.commit()
-        print(f"active dates {date}")
         return jsonify({"success": True}), 200
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
