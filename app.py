@@ -167,6 +167,15 @@ def update_user():
             if "xp" in entry and "date" in entry
         ]
         level = data.get("level")
+        last_active_date = datetime.datetime.fromtimestamp(
+            data.get("last_active_date")
+        ).strftime("%Y-%m-%d")
+        xp = data.get("xp")
+
+        print(f"this is received user data: {xp_data}")
+        print(f"new received data: {data}")
+        print(f"last acitve date: {last_active_date}")
+        print(f"updated user xp: {xp}")
 
         with db_connection() as connection:
             with connection.cursor() as cursor:
@@ -189,6 +198,7 @@ def update_user():
                         (current_user_id, xp, date, xp),
                     )
         connection.commit()
+        print(f"active dates {date}")
         return jsonify({"success": True}), 200
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
