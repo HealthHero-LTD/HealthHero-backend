@@ -38,7 +38,7 @@ def login():
 
     try:
         with db_connection() as connection:
-            with db_cursor() as cursor:
+            with connection.cursor() as cursor:
                 cursor.execute(sql_queries.check_login_user_id, (user_id,))
                 user_id_exist = cursor.fetchone()
                 access_token = create_access_token(
@@ -74,15 +74,24 @@ def login():
 def get_user():
     try:
         current_user_id = get_jwt_identity()
-        print("check1")
+
         with db_cursor() as cursor:
             cursor.execute(
                 sql_queries.get_user,
                 (current_user_id,),
             )
-            user = cursor.fetchall()
-        print(user)
-        return jsonify(user), 200
+            row = cursor.fetchone()
+            if row:
+                last_active_date = row[3].strftime("%Y-%m-%d") if row[3] else None
+                user = {
+                    "username": row[0],
+                    "level": row[1],
+                    "xp": row[2],
+                    "last_active_date": last_active_date,
+                }
+                return jsonify(user), 200
+            else:
+                return jsonify({"error": "User not found"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -119,7 +128,7 @@ def set_username():
         username = data.get("username")
 
         with db_connection() as connection:
-            with db_cursor() as cursor:
+            with connection.cursor() as cursor:
                 cursor.execute(
                     sql_queries.check_username,
                     (username,),
@@ -159,19 +168,17 @@ def update_user():
             if "xp" in entry and "date" in entry
         ]
         level = data.get("level")
+        last_active_date = datetime.datetime.fromtimestamp(
+            data.get("last_active_date")
+        ).strftime("%Y-%m-%d")
+        xp = data.get("xp")
 
         with db_connection() as connection:
-            with db_cursor() as cursor:
+            with connection.cursor() as cursor:
+                # Update 'users' table
                 cursor.execute(
-                    sql_queries.update_users_level,
-                    (level, current_user_id),
-                )
-
-                # update 'users' table
-                total_xp = sum(xp for xp, _ in xp_data)
-                cursor.execute(
-                    sql_queries.update_users_xp,
-                    (total_xp, current_user_id),
+                    sql_queries.update_users_info,
+                    (level, xp, last_active_date, current_user_id),
                 )
 
                 # update 'daily' table
