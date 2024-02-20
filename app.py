@@ -157,6 +157,26 @@ def get_user():
 @app.get("/leaderboard")
 def get_leaderboard():
     try:
+        leaderboard_data = (
+            db.session.query(User_sqla.username, User_sqla.level, User_sqla.xp)
+            .order_by(User_sqla.level.desc(), User_sqla.xp.desc())
+            .all()
+        )
+
+        leaderboard_entries = []
+        for index, entry in enumerate(leaderboard_data, start=1):
+            leaderboard_entry = {
+                "id": index,
+                "username": entry.username,
+                "level": entry.level,
+                "score": entry.xp,
+            }
+            leaderboard_entries.append(leaderboard_entry)
+        return jsonify(leaderboard_entries), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    try:
         with db_cursor() as cursor:
             cursor.execute(sql_queries.fetch_leaderboard)
             leaderboard_data = cursor.fetchall()
