@@ -13,6 +13,7 @@ from flask_jwt_extended import jwt_required
 from flask_jwt_extended import JWTManager
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from sqlalchemy.exc import IntegrityError
 
 
 DATABASE_URL = dbm.DATABASE_URL
@@ -35,11 +36,11 @@ class User_sqla(db.Model):
     __tablename__ = "users_sqla"
 
     user_id = db.Column(db.String(256), primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
+    username = db.Column(db.String(80), nullable=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    xp = db.Column(db.Integer(), nullable=False)
-    level = db.Column(db.Integer(), nullable=False)
-    last_active_date = db.Column(db.Date(), nullable=False)
+    xp = db.Column(db.Integer(), nullable=False, default=0)
+    level = db.Column(db.Integer(), nullable=False, default=1)
+    last_active_date = db.Column(db.Date(), nullable=True)
 
 
 class Daily_sqla(db.Model):
@@ -61,6 +62,37 @@ def login():
         user_email = idinfo["email"]
     except ValueError as e:
         return jsonify({"error": e}), 401
+
+    user = User_sqla.query.filter_by(user_id=user_id).first()
+    access_token = create_access_token(identity=user_id)
+
+    if user:
+        return jsonify(
+            {
+                "access_token": access_token,
+                "message": "user already exists",
+                "token_id": user_id,
+            }
+        )
+    else:
+        try:
+            new_user = User_sqla(user_id=user_id, email=user_email)
+            db.session.add(new_user)
+            db.session.commit()
+            return jsonify(
+                {
+                    "access_token": access_token,
+                    "message": "data inserted successfully",
+                    "token_id": user_id,
+                }
+            )
+        except IntegrityError as e:
+            db.session.rollback()
+            print("IntegrityError:", str(e))
+            return jsonify({"error": "User already exists"}), 400
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": str(e)}), 500
 
     try:
         with db_connection() as connection:
