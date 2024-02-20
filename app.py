@@ -11,6 +11,9 @@ from flask_jwt_extended import create_access_token
 from flask_jwt_extended import get_jwt_identity
 from flask_jwt_extended import jwt_required
 from flask_jwt_extended import JWTManager
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+from sqlalchemy.exc import IntegrityError
 
 
 DATABASE_URL = dbm.DATABASE_URL
@@ -22,6 +25,30 @@ app = Flask(__name__)
 app.config["JWT_SECRET_KEY"] = "super-secret"
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=7)
 jwt = JWTManager(app)
+
+app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False  # Disable modification tracking
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
+
+
+class User_sqla(db.Model):
+    __tablename__ = "users_sqla"
+
+    user_id = db.Column(db.String(256), primary_key=True)
+    username = db.Column(db.String(80), nullable=True)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    xp = db.Column(db.Integer(), nullable=False, default=0)
+    level = db.Column(db.Integer(), nullable=False, default=1)
+    last_active_date = db.Column(db.Date(), nullable=True)
+
+
+class Daily_sqla(db.Model):
+    __tablename__ = "daily_sqla"
+
+    user_id = db.Column(db.String(256), primary_key=True)
+    daily_date = db.Column(db.Date(), nullable=False)
+    daily_xp = db.Column(db.Integer(), nullable=False)
 
 
 @app.post("/login")
@@ -36,37 +63,36 @@ def login():
     except ValueError as e:
         return jsonify({"error": e}), 401
 
-    try:
-        with db_connection() as connection:
-            with connection.cursor() as cursor:
-                cursor.execute(sql_queries.check_login_user_id, (user_id,))
-                user_id_exist = cursor.fetchone()
-                access_token = create_access_token(
-                    identity=user_id
-                )  # Health Hero token
+    user = User_sqla.query.filter_by(user_id=user_id).first()
+    access_token = create_access_token(identity=user_id)
 
-                if user_id_exist:
-                    return jsonify(
-                        {
-                            "access_token": access_token,
-                            "message": "user already exists",
-                            "token_id": user_id,
-                        }
-                    )
-                else:
-                    cursor.execute(
-                        sql_queries.insert_login_user_id, (user_id, user_email)
-                    )
-                    connection.commit()
+    if user:
         return jsonify(
             {
                 "access_token": access_token,
-                "message": "data inserted successfully",
+                "message": "user already exists",
                 "token_id": user_id,
             }
         )
-    except Exception as e:
-        return jsonify({"error": str(e)})
+    else:
+        try:
+            new_user = User_sqla(user_id=user_id, email=user_email)
+            db.session.add(new_user)
+            db.session.commit()
+            return jsonify(
+                {
+                    "access_token": access_token,
+                    "message": "data inserted successfully",
+                    "token_id": user_id,
+                }
+            )
+        except IntegrityError as e:
+            db.session.rollback()
+            print("IntegrityError:", str(e))
+            return jsonify({"error": "User already exists"}), 400
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": str(e)}), 500
 
 
 @app.get("/get-user")
@@ -74,24 +100,23 @@ def login():
 def get_user():
     try:
         current_user_id = get_jwt_identity()
+        user = User_sqla.query.filter_by(user_id=current_user_id).first()
 
-        with db_cursor() as cursor:
-            cursor.execute(
-                sql_queries.get_user,
-                (current_user_id,),
+        if user:
+            last_active_date = (
+                user.last_active_date.strftime("%Y-%m-%d")
+                if user.last_active_date
+                else None
             )
-            row = cursor.fetchone()
-            if row:
-                last_active_date = row[3].strftime("%Y-%m-%d") if row[3] else None
-                user = {
-                    "username": row[0],
-                    "level": row[1],
-                    "xp": row[2],
-                    "last_active_date": last_active_date,
-                }
-                return jsonify(user), 200
-            else:
-                return jsonify({"error": "User not found"}), 404
+            user_data = {
+                "username": user.username,
+                "level": user.level,
+                "xp": user.xp,
+                "last_active_date": last_active_date,
+            }
+            return jsonify(user_data), 200
+        else:
+            return jsonify({"error": "User not found"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -99,21 +124,21 @@ def get_user():
 @app.get("/leaderboard")
 def get_leaderboard():
     try:
-        with db_cursor() as cursor:
-            cursor.execute(sql_queries.fetch_leaderboard)
-            leaderboard_data = cursor.fetchall()
+        leaderboard_data = (
+            db.session.query(User_sqla.username, User_sqla.level, User_sqla.xp)
+            .order_by(User_sqla.level.desc(), User_sqla.xp.desc())
+            .all()
+        )
 
         leaderboard_entries = []
-        id = 1
-        for row in leaderboard_data:
+        for index, entry in enumerate(leaderboard_data, start=1):
             leaderboard_entry = {
-                "id": id,
-                "username": row[0],
-                "level": row[1],
-                "score": row[2],
+                "id": index,
+                "username": entry.username,
+                "level": entry.level,
+                "score": entry.xp,
             }
             leaderboard_entries.append(leaderboard_entry)
-            id += 1
         return jsonify(leaderboard_entries), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -123,31 +148,27 @@ def get_leaderboard():
 @jwt_required()
 def set_username():
     try:
-        current_user_token_id = get_jwt_identity()
+        current_user_id = get_jwt_identity()
         data = request.get_json()
-        username = data.get("username")
+        new_username = data.get("username")
 
-        with db_connection() as connection:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    sql_queries.check_username,
-                    (username,),
-                )
-                existing_username = cursor.fetchone()
+        existing_user = User_sqla.query.filter_by(username=new_username).first()
+        if existing_user:
+            return jsonify({"error": "Username already exists"}), 400
 
-                if existing_username:
-                    return jsonify({"error": "username already exists"}), 400
+        current_user = User_sqla.query.get(current_user_id)
+        current_user.username = new_username
+        db.session.commit()
 
-                cursor.execute(
-                    sql_queries.update_username,
-                    (username, current_user_token_id),
-                )
-                connection.commit()
         return (
-            jsonify({"username": username, "message": "username updated successfully"}),
+            jsonify(
+                {"username": new_username, "message": "Username updated successfully"}
+            ),
             200,
         )
+
     except Exception as e:
+        db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
 
@@ -158,12 +179,14 @@ def update_user():
         current_user_id = get_jwt_identity()
         data = request.get_json()
 
-        # conver unix timestamp to YYYY-MM-DD
+        # Convert Unix timestamp to YYYY-MM-DD
         xp_data = [
-            (
-                entry["xp"],
-                datetime.datetime.fromtimestamp(entry["date"]).strftime("%Y-%m-%d"),
-            )
+            {
+                "xp": entry["xp"],
+                "date": datetime.datetime.fromtimestamp(entry["date"]).strftime(
+                    "%Y-%m-%d"
+                ),
+            }
             for entry in data.get("xp_data_array")
             if "xp" in entry and "date" in entry
         ]
@@ -173,33 +196,39 @@ def update_user():
         ).strftime("%Y-%m-%d")
         xp = data.get("xp")
 
-        with db_connection() as connection:
-            with connection.cursor() as cursor:
-                # Update 'users' table
-                cursor.execute(
-                    sql_queries.update_users_info,
-                    (level, xp, last_active_date, current_user_id),
-                )
+        # Update 'users_sqla' table
+        user = User_sqla.query.get(current_user_id)
+        if user:
+            user.level = level
+            user.xp = xp
+            user.last_active_date = last_active_date
+            db.session.commit()
 
-                # update 'daily' table
-                for xp, date in xp_data:
-                    cursor.execute(
-                        sql_queries.insert_daily_xp,
-                        (current_user_id, xp, date, xp),
+            # Update 'daily_sqla' table
+            for entry in xp_data:
+                daily_entry = Daily_sqla.query.filter_by(
+                    user_id=current_user_id, daily_date=entry["date"]
+                ).first()
+
+                if daily_entry:
+                    daily_entry.daily_xp = entry["xp"]
+                else:
+                    new_daily_entry = Daily_sqla(
+                        user_id=current_user_id,
+                        daily_date=entry["date"],
+                        daily_xp=entry["xp"],
                     )
-        connection.commit()
-        return jsonify({"success": True}), 200
+                    db.session.add(new_daily_entry)
+
+            db.session.commit()
+
+            return jsonify({"success": True}), 200
+        else:
+            return jsonify({"success": False, "error": "User not found"}), 404
     except Exception as e:
+        db.session.rollback()
         return jsonify({"success": False, "error": str(e)}), 500
 
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=6969, debug=True)
-
-
-def db_connection():
-    return pg2.connect(DATABASE_URL)
-
-
-def db_cursor():
-    return db_connection().cursor()
