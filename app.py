@@ -132,6 +132,28 @@ def login():
 def get_user():
     try:
         current_user_id = get_jwt_identity()
+        user = User_sqla.query.filter_by(user_id=current_user_id).first()
+
+        if user:
+            last_active_date = (
+                user.last_active_date.strftime("%Y-%m-%d")
+                if user.last_active_date
+                else None
+            )
+            user_data = {
+                "username": user.username,
+                "level": user.level,
+                "xp": user.xp,
+                "last_active_date": last_active_date,
+            }
+            return jsonify(user_data), 200
+        else:
+            return jsonify({"error": "User not found"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    try:
+        current_user_id = get_jwt_identity()
 
         with db_cursor() as cursor:
             cursor.execute(
@@ -251,6 +273,60 @@ def set_username():
 @app.post("/update-user")
 @jwt_required()
 def update_user():
+    try:
+        current_user_id = get_jwt_identity()
+        data = request.get_json()
+
+        # Convert Unix timestamp to YYYY-MM-DD
+        xp_data = [
+            {
+                "xp": entry["xp"],
+                "date": datetime.datetime.fromtimestamp(entry["date"]).strftime(
+                    "%Y-%m-%d"
+                ),
+            }
+            for entry in data.get("xp_data_array")
+            if "xp" in entry and "date" in entry
+        ]
+        level = data.get("level")
+        last_active_date = datetime.datetime.fromtimestamp(
+            data.get("last_active_date")
+        ).strftime("%Y-%m-%d")
+        xp = data.get("xp")
+
+        # Update 'users_sqla' table
+        user = User_sqla.query.get(current_user_id)
+        if user:
+            user.level = level
+            user.xp = xp
+            user.last_active_date = last_active_date
+            db.session.commit()
+
+            # Update 'daily_sqla' table
+            for entry in xp_data:
+                daily_entry = Daily_sqla.query.filter_by(
+                    user_id=current_user_id, daily_date=entry["date"]
+                ).first()
+
+                if daily_entry:
+                    daily_entry.daily_xp = entry["xp"]
+                else:
+                    new_daily_entry = Daily_sqla(
+                        user_id=current_user_id,
+                        daily_date=entry["date"],
+                        daily_xp=entry["xp"],
+                    )
+                    db.session.add(new_daily_entry)
+
+            db.session.commit()
+
+            return jsonify({"success": True}), 200
+        else:
+            return jsonify({"success": False, "error": "User not found"}), 404
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
     try:
         current_user_id = get_jwt_identity()
         data = request.get_json()
