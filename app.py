@@ -181,9 +181,28 @@ def get_leaderboard():
 @jwt_required()
 def set_username():
     try:
-        current_user_token_id = get_jwt_identity()
+        current_user_id = get_jwt_identity()
         data = request.get_json()
-        username = data.get("username")
+        new_username = data.get("username")
+
+        existing_user = User_sqla.query.filter_by(username=new_username).first()
+        if existing_user:
+            return jsonify({"error": "Username already exists"}), 400
+
+        current_user = User_sqla.query.get(current_user_id)
+        current_user.username = new_username
+        db.session.commit()
+
+        return (
+            jsonify(
+                {"username": new_username, "message": "Username updated successfully"}
+            ),
+            200,
+        )
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
 
         with db_connection() as connection:
             with connection.cursor() as cursor:
