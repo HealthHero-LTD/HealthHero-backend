@@ -11,6 +11,8 @@ from flask_jwt_extended import create_access_token
 from flask_jwt_extended import get_jwt_identity
 from flask_jwt_extended import jwt_required
 from flask_jwt_extended import JWTManager
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 
 
 DATABASE_URL = dbm.DATABASE_URL
@@ -22,6 +24,30 @@ app = Flask(__name__)
 app.config["JWT_SECRET_KEY"] = "super-secret"
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=7)
 jwt = JWTManager(app)
+
+app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False  # Disable modification tracking
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
+
+
+class User_sqla(db.Model):
+    __tablename__ = "users_sqla"
+
+    id = db.Column(db.Integer(), primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    xp = db.Column(db.Integer(), nullable=False)
+    level = db.Column(db.Integer(), nullable=False)
+    last_active_date = db.Column(db.Date(), nullable=False)
+
+
+class Daily_sqla(db.Model):
+    __tablename__ = "daily_sqla"
+    id = db.Column(db.Integer(), primary_key=True)
+    user_id = db.Column(db.Integer(), db.ForeignKey("users_sqla.id"), nullable=False)
+    daily_date = db.Column(db.Date(), nullable=False)
+    daily_xp = db.Column(db.Integer(), nullable=False)
 
 
 @app.post("/login")
