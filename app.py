@@ -34,8 +34,7 @@ migrate = Migrate(app, db)
 class User_sqla(db.Model):
     __tablename__ = "users_sqla"
 
-    id = db.Column(db.Integer(), primary_key=True)
-    user_id = db.Column(db.String(256), unique=True, nullable=False)
+    user_id = db.Column(db.String(256), primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     xp = db.Column(db.Integer(), nullable=False)
@@ -45,8 +44,8 @@ class User_sqla(db.Model):
 
 class Daily_sqla(db.Model):
     __tablename__ = "daily_sqla"
-    id = db.Column(db.Integer(), primary_key=True)
-    user_id = db.Column(db.Integer(), db.ForeignKey("users_sqla.id"), nullable=False)
+
+    user_id = db.Column(db.String(256), primary_key=True)
     daily_date = db.Column(db.Date(), nullable=False)
     daily_xp = db.Column(db.Integer(), nullable=False)
 
