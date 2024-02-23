@@ -11,11 +11,14 @@ from flask_jwt_extended import create_access_token
 from flask_jwt_extended import get_jwt_identity
 from flask_jwt_extended import jwt_required
 from flask_jwt_extended import JWTManager
+import pyodbc, struct
+from azure import identity
 
 
 DATABASE_URL = dbm.DATABASE_URL
 SECRET_KEY = dbm.SECRET_KEY
 CLIENT_ID = os.getenv("CLIENT_ID")
+connection_string = os.getenv("AZURE_SQL_CONNECTIONSTRING")
 
 app = Flask(__name__)
 
@@ -99,7 +102,8 @@ def get_user():
 @app.get("/leaderboard")
 def get_leaderboard():
     try:
-        with db_cursor() as cursor:
+        with get_conn() as conn:
+            cursor = conn.cursor()
             cursor.execute(sql_queries.fetch_leaderboard)
             leaderboard_data = cursor.fetchall()
 
@@ -203,3 +207,20 @@ def db_connection():
 
 def db_cursor():
     return db_connection().cursor()
+
+
+def get_conn():
+    credential = identity.DefaultAzureCredential(
+        exclude_interactive_browser_credential=False
+    )
+    token_bytes = credential.get_token(
+        "https://database.windows.net/.default"
+    ).token.encode("UTF-16-LE")
+    token_struct = struct.pack(f"<I{len(token_bytes)}s", len(token_bytes), token_bytes)
+    SQL_COPT_SS_ACCESS_TOKEN = (
+        1256  # This connection option is defined by microsoft in msodbcsql.h
+    )
+    conn = pyodbc.connect(
+        connection_string, attrs_before={SQL_COPT_SS_ACCESS_TOKEN: token_struct}
+    )
+    return conn
