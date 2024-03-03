@@ -40,7 +40,7 @@ def login():
         return jsonify({"error": e}), 401
 
     try:
-        with db_connection() as connection:
+        with get_conn() as connection:
             with connection.cursor() as cursor:
                 cursor.execute(sql_queries.check_login_user_id, (user_id,))
                 user_id_exist = cursor.fetchone()
@@ -131,7 +131,7 @@ def set_username():
         data = request.get_json()
         username = data.get("username")
 
-        with db_connection() as connection:
+        with get_conn() as connection:
             with connection.cursor() as cursor:
                 cursor.execute(
                     sql_queries.check_username,
