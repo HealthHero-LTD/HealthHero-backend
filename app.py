@@ -11,11 +11,9 @@ from flask_jwt_extended import create_access_token
 from flask_jwt_extended import get_jwt_identity
 from flask_jwt_extended import jwt_required
 from flask_jwt_extended import JWTManager
-import pyodbc, struct
-from azure import identity
 
 
-DATABASE_URL = dbm.DATABASE_URL
+DATABASE_URL = os.getenv("DATABASE_URL")
 SECRET_KEY = dbm.SECRET_KEY
 CLIENT_ID = os.getenv("CLIENT_ID")
 
@@ -68,7 +66,7 @@ def login():
             }
         )
     except Exception as e:
-        return jsonify({"error": str(e)})
+        return jsonify({"error": str(e)}), 500
 
 
 @app.get("/get-user")
@@ -193,6 +191,7 @@ def update_user():
         connection.commit()
         return jsonify({"success": True}), 200
     except Exception as e:
+        print(e)
         return jsonify({"success": False, "error": str(e)}), 500
 
 
