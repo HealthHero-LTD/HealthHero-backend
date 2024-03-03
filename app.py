@@ -13,7 +13,7 @@ from flask_jwt_extended import jwt_required
 from flask_jwt_extended import JWTManager
 
 
-DATABASE_URL = dbm.DATABASE_URL
+DATABASE_URL = os.getenv("DATABASE_URL")
 SECRET_KEY = dbm.SECRET_KEY
 CLIENT_ID = os.getenv("CLIENT_ID")
 
@@ -66,7 +66,7 @@ def login():
             }
         )
     except Exception as e:
-        return jsonify({"error": str(e)})
+        return jsonify({"error": str(e)}), 500
 
 
 @app.get("/get-user")
@@ -99,7 +99,8 @@ def get_user():
 @app.get("/leaderboard")
 def get_leaderboard():
     try:
-        with db_cursor() as cursor:
+        with db_connection() as connection:
+            cursor = connection.cursor()
             cursor.execute(sql_queries.fetch_leaderboard)
             leaderboard_data = cursor.fetchall()
 
@@ -190,6 +191,7 @@ def update_user():
         connection.commit()
         return jsonify({"success": True}), 200
     except Exception as e:
+        print(e)
         return jsonify({"success": False, "error": str(e)}), 500
 
 
