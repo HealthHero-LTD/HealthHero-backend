@@ -15,6 +15,7 @@ Flask-SQLAlchemy==3.1.1
 google-auth==2.26.2
 google-auth-httplib2==0.2.0
 google-auth-oauthlib==1.2.0
+gunicorn==21.2.0
 httplib2==0.22.0
 idna==3.6
 itsdangerous==2.1.2
